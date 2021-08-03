@@ -5,6 +5,8 @@ use crate::{
 };
 use std::{fmt, marker::PhantomData, mem::transmute, rc::Rc, str};
 
+/// A primitive rune-based string type.
+/// It is usally seen in its borrowed form, `&RuneStr`.
 pub struct RuneStr(PhantomData<Rc<()>>, pub(crate) [u8]);
 
 impl fmt::Display for RuneStr {
@@ -35,15 +37,18 @@ pub unsafe fn rune_str_from_rune_bytes_unchecked_mut(bytes: &mut [u8]) -> &mut R
 }
 
 impl RuneStr {
-    fn bytes(&self) -> Bytes<'_> {
+    /// Returns an iterator over the bytes of a rune string slice.
+    pub fn bytes(&self) -> Bytes<'_> {
         Bytes { data: &self.1 }
     }
 
-    fn runes(&self) -> Runes<'_> {
+    /// Returns an iterator over the `rune`s of a rune string slice.
+    pub fn runes(&self) -> Runes<'_> {
         Runes { data: &self.1 }
     }
 
-    fn chars(&self) -> Chars<'_> {
+    /// Returns an iterator over the `char`s of a rune string slice.
+    pub fn chars(&self) -> Chars<'_> {
         Chars {
             marker: PhantomData,
             chars: RuneReprCharVec::default(),
@@ -53,6 +58,7 @@ impl RuneStr {
     }
 }
 
+/// An iterator over the bytes of a rune string slice.
 #[derive(Clone, Copy)]
 pub struct Bytes<'str> {
     data: &'str [u8],
@@ -84,6 +90,16 @@ impl<'str> DoubleEndedIterator for Bytes<'str> {
     }
 }
 
+impl fmt::Debug for Bytes<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Bytes(")?;
+        f.debug_list().entries(self.clone()).finish()?;
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
+/// An iterator over the `rune`s of a rune string slice.
 #[derive(Clone, Copy)]
 pub struct Runes<'str> {
     data: &'str [u8],
@@ -140,6 +156,16 @@ impl<'str> DoubleEndedIterator for Runes<'str> {
     }
 }
 
+impl fmt::Debug for Runes<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Runes(")?;
+        f.debug_list().entries(self.clone()).finish()?;
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
+/// An iterator over the `char`s of a rune string slice.
 #[derive(Clone)]
 pub struct Chars<'str> {
     marker: PhantomData<Rc<()>>,
@@ -211,3 +237,13 @@ impl<'str> DoubleEndedIterator for Chars<'str> {
         None
     }
 }
+
+impl fmt::Debug for Chars<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Chars(")?;
+        f.debug_list().entries(self.clone()).finish()?;
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+

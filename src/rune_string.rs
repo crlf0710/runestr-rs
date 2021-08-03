@@ -7,6 +7,7 @@ use crate::{
 };
 use std::{fmt, marker::PhantomData, ops, rc::Rc};
 
+/// A growable rune-based string type.
 #[derive(Clone, Default)]
 pub struct RuneString(PhantomData<Rc<()>>, Vec<u8>);
 
@@ -37,11 +38,17 @@ impl ops::DerefMut for RuneString {
 }
 
 impl RuneString {
-    pub fn new() -> Self {
-        Default::default()
+    /// Creates a new empty `RuneString`.
+    pub const fn new() -> Self {
+        RuneString(PhantomData, Vec::new())
     }
 
-    pub fn from_string(s: &str) -> Option<Self> {
+    /// Perform a conversion from `str` to create a `RuneString`,
+    /// returning `None` if data needs to be changed.
+    ///
+    /// You can use `from_str_lossy` instead if you allow the text
+    /// be slightly modified to form complete runes.
+    pub fn from_str(s: &str) -> Option<Self> {
         use unicode_normalization::UnicodeNormalization;
         use unicode_segmentation::UnicodeSegmentation;
 
@@ -58,7 +65,9 @@ impl RuneString {
         Some(string)
     }
 
-    pub fn from_string_lossy(s: &str) -> Self {
+    /// Perform a conversion from `str` to create a `RuneString`,
+    /// slightly modifying the text to form complete runes if necessary.
+    pub fn from_str_lossy(s: &str) -> Self {
         use unicode_normalization::UnicodeNormalization;
         use unicode_segmentation::UnicodeSegmentation;
 
@@ -75,6 +84,7 @@ impl RuneString {
         string
     }
 
+    /// Append the given `rune` to the end of the `RuneString`.
     pub fn push(&mut self, r: rune) {
         let s = r.into_inner();
         let old_len = self.1.len();
@@ -93,6 +103,7 @@ impl RuneString {
         }
     }
 
+    /// Append the given `RuneStr` to the end of the `RuneString`.
     pub fn push_rune_str(&mut self, s: &RuneStr) {
         self.1.extend(s.1.iter().copied())
     }

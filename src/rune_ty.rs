@@ -3,6 +3,7 @@ use crate::tables::grapheme::GraphemeCat;
 use smallvec::smallvec;
 use std::{convert::TryFrom, fmt, iter::FromIterator, marker::PhantomData, rc::Rc, str};
 
+/// The `rune` type represents a user-perceived character.
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct rune(u32, PhantomData<Rc<()>>);
@@ -189,6 +190,39 @@ pub(crate) const MIN_MULTICHAR_RUNE_INTERNAL_VALUE: u32 = char::MAX as u32 + 1;
 pub(crate) const MAX_MULTICHAR_RUNE_INTERNAL_VALUE: u32 = 0x7FFFFFFF;
 
 impl rune {
+    /// Convert a `char` to `rune`, returning `None` if it could not form a complete rune.
+    pub fn from_char(ch: char) -> Option<Self> {
+        use crate::tables::grapheme::grapheme_category;
+        use grapheme_analysis::normalize_rune;
+
+        let grapheme_cat = [grapheme_category(ch).2];
+        if normalize_rune(&grapheme_cat).is_none() {
+            unsafe { Some(Self::from_char_unchecked(ch)) }
+        } else {
+            None
+        }
+    }
+
+    /// Convert a `char` to `rune`, modifying text to form a complete rune if necessary.
+    /// See crate documentation for more details on this.
+    pub fn from_char_lossy(ch: char) -> Self {
+        use crate::tables::grapheme::grapheme_category;
+        use grapheme_analysis::{apply_normalize_fix, normalize_rune};
+
+        let grapheme_cat = [grapheme_category(ch).2];
+        let fix = normalize_rune(&grapheme_cat);
+        if fix.is_none() {
+            unsafe {
+                return Self::from_char_unchecked(ch);
+            }
+        } else {
+            let mut lossy_chars: RuneReprCharVec = smallvec![ch];
+            apply_normalize_fix(fix, &mut lossy_chars);
+            let str = String::from_iter(lossy_chars.into_iter());
+            unsafe { Self::from_multi_char_grapheme_cluster_unchecked(&str) }
+        }
+    }
+
     pub(crate) unsafe fn from_char_unchecked(ch: char) -> Self {
         rune(ch as _, PhantomData)
     }
@@ -221,36 +255,6 @@ impl rune {
             "rune internal index used up"
         );
         rune(internal_idx, PhantomData)
-    }
-
-    pub fn from_char(ch: char) -> Option<Self> {
-        use crate::tables::grapheme::grapheme_category;
-        use grapheme_analysis::normalize_rune;
-
-        let grapheme_cat = [grapheme_category(ch).2];
-        if normalize_rune(&grapheme_cat).is_none() {
-            unsafe { Some(Self::from_char_unchecked(ch)) }
-        } else {
-            None
-        }
-    }
-
-    pub fn from_char_lossy(ch: char) -> Self {
-        use crate::tables::grapheme::grapheme_category;
-        use grapheme_analysis::{apply_normalize_fix, normalize_rune};
-
-        let grapheme_cat = [grapheme_category(ch).2];
-        let fix = normalize_rune(&grapheme_cat);
-        if fix.is_none() {
-            unsafe {
-                return Self::from_char_unchecked(ch);
-            }
-        } else {
-            let mut lossy_chars: RuneReprCharVec = smallvec![ch];
-            apply_normalize_fix(fix, &mut lossy_chars);
-            let str = String::from_iter(lossy_chars.into_iter());
-            unsafe { Self::from_multi_char_grapheme_cluster_unchecked(&str) }
-        }
     }
 
     pub(crate) unsafe fn from_rune_repr_char_vec(repr: &RuneReprCharVec) -> Option<Self> {
@@ -295,6 +299,9 @@ impl rune {
         }
     }
 
+    /// Convert a `&str` consisting of a grapheme cluster to `rune`,
+    /// returning `None` if the input is not exactly a grapheme cluster or
+    /// it could not form a complete rune.
     pub fn from_grapheme_cluster(grapheme: &str) -> Option<Self> {
         use unicode_normalization::UnicodeNormalization;
         use unicode_segmentation::UnicodeSegmentation;
@@ -312,6 +319,9 @@ impl rune {
         unsafe { Self::from_rune_repr_char_vec(&repr) }
     }
 
+    /// Convert a `&str` consisting of a grapheme cluster to `rune`,
+    /// tweaking the text a little if necessary,
+    /// or returning `None` if the input is not exactly a grapheme cluster.
     pub fn from_grapheme_cluster_lossy(grapheme: &str) -> Option<Self> {
         use unicode_normalization::UnicodeNormalization;
         use unicode_segmentation::UnicodeSegmentation;
@@ -342,6 +352,7 @@ impl rune {
         }
     }
 
+    /// Retrieves the internal representation of this `rune`.
     pub fn into_inner(self) -> u32 {
         self.0
     }
