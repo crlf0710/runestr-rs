@@ -3,6 +3,11 @@ name = "runestr"
 version = "0.1.0"
 edition = "2018"
 license = "MIT OR Apache-2.0"
+description = "User-perceived characters related types and data structures"
+repository = "https://github.com/crlf0710/runestr-rs"
+documentation = "https://docs.rs/runestr"
+categories = ["rust-patterns"]
+readme = "README.md"
 
 [dependencies]
 smallvec = "1.6.1"
