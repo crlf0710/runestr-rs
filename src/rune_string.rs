@@ -108,3 +108,19 @@ impl RuneString {
         self.1.extend(s.1.iter().copied())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RuneString;
+
+    #[test]
+    fn test_rune_count() {
+        let runestr1 = RuneString::from_str_lossy("\u{0041}\u{0341}\u{304B}\u{3099}\u{9508}");
+        assert_eq!(3, runestr1.runes().count());
+        assert_eq!(3, runestr1.chars().count());
+
+        let runestr2 = RuneString::from_str_lossy("\r\r\n\n");
+        assert_eq!(3, runestr2.runes().count());
+        assert_eq!(5, runestr2.chars().count());
+    }
+}
