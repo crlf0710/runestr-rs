@@ -3,9 +3,28 @@ use crate::{
     rune_registry::THREAD_RUNE_REGISTRY,
     rune_ty::{rune, RuneInfo, RuneReprCharVec},
 };
-use std::{marker::PhantomData, mem::transmute, rc::Rc, str};
+use std::{fmt, marker::PhantomData, mem::transmute, rc::Rc, str};
 
 pub struct RuneStr(PhantomData<Rc<()>>, pub(crate) [u8]);
+
+impl fmt::Display for RuneStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for ch in self.chars() {
+            write!(f, "{}", ch)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for RuneStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"")?;
+        for ch in self.chars() {
+            write!(f, "{:?}", ch.escape_debug())?;
+        }
+        write!(f, "\"")
+    }
+}
 
 pub unsafe fn rune_str_from_rune_bytes_unchecked(bytes: &[u8]) -> &RuneStr {
     unsafe { transmute(bytes) }

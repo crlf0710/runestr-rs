@@ -5,10 +5,22 @@ use crate::{
     },
     rune_ty::RuneReprCharVec,
 };
-use std::{marker::PhantomData, ops, rc::Rc};
+use std::{fmt, marker::PhantomData, ops, rc::Rc};
 
 #[derive(Clone, Default)]
 pub struct RuneString(PhantomData<Rc<()>>, Vec<u8>);
+
+impl fmt::Display for RuneString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &**self)
+    }
+}
+
+impl fmt::Debug for RuneString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", &**self)
+    }
+}
 
 impl ops::Deref for RuneString {
     type Target = RuneStr;

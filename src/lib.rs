@@ -1,4 +1,5 @@
 #![deny(unsafe_op_in_unsafe_fn)]
+#![deny(warnings, missing_debug_implementations)]
 #![allow(irrefutable_let_patterns, dead_code)]
 
 pub(crate) mod tables;

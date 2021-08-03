@@ -135,7 +135,7 @@ mod grapheme_analysis {
                 .skip(pure_l_len + pure_lv_len + pure_v_len)
                 .take_while(|cat| matches!(cat, GraphemeCat::GC_LVT))
                 .count();
-            let pure_t_len = core_gcat_slice
+            let _pure_t_len = core_gcat_slice
                 .iter()
                 .copied()
                 .skip(pure_l_len + pure_lv_len + pure_v_len + pure_lvt_len)

@@ -16,7 +16,6 @@ const END_FIVE_B: u32 = 0x400_0000;
 const END_SIX_B: u32 = 0x8000_0000;
 
 pub(crate) fn len(code: u32) -> usize {
-    assert!(code >= 0);
     if code < END_ONE_B {
         1
     } else if code < END_TWO_B {
