@@ -60,3 +60,21 @@ pub type RuneSlice = [rune];
 
 /// A `Vec` of `rune`s
 pub type RuneVec = Vec<rune>;
+
+/// `rune` and `RuneStr` related iterators
+pub mod iter {
+    pub use crate::rune_ty::Chars as RuneChars;
+
+    pub use crate::rune_str_ty::Bytes as RuneStrBytes;
+
+    pub use crate::rune_str_ty::Runes as RuneStrRunes;
+
+    pub use crate::rune_str_ty::Chars as RuneStrChars;
+}
+
+/// Internal APIs that can be used by downstream crates.
+#[doc(hidden)]
+pub mod internals {
+    pub use crate::tables::grapheme::grapheme_category;
+    pub use crate::tables::grapheme::GraphemeCat;
+}

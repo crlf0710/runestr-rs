@@ -357,6 +357,33 @@ impl rune {
         self.0
     }
 
+    /// Retrieves the char this rune represents. Returns `None` if it represents
+    /// multiple chars.
+    pub fn into_char(self) -> Option<char> {
+        match self.into_rune_info() {
+            RuneInfo::Single(ch) => Some(ch),
+            RuneInfo::Multi(..) => None,
+        }
+    }
+
+    /// Retrieves an iterator that iterate over all the chars this rune represents.
+    pub fn into_chars(self) -> Chars {
+        match self.into_rune_info() {
+            RuneInfo::Single(ch) => Chars(CharsInner::Single(Some(ch))),
+            RuneInfo::Multi(idx, _) => {
+                let charvec = THREAD_RUNE_REGISTRY.with(|registry| {
+                    registry.with_existing_rune_repr(idx, |bytes| unsafe {
+                        str::from_utf8_unchecked(bytes)
+                            .chars()
+                            .rev()
+                            .collect::<RuneReprCharVec>()
+                    })
+                });
+                Chars(CharsInner::MultiRev(charvec))
+            }
+        }
+    }
+
     pub(crate) unsafe fn from_rune_info(ri: RuneInfo) -> Self {
         match ri {
             RuneInfo::Single(ch) => rune(ch as u32, PhantomData),
@@ -427,6 +454,48 @@ impl fmt::Debug for rune {
             }
         }
         write!(f, "')")
+    }
+}
+
+/// An iterator over the `char`s of a rune.
+#[derive(Clone)]
+pub struct Chars(CharsInner);
+
+#[derive(Clone)]
+enum CharsInner {
+    Single(Option<char>),
+    MultiRev(RuneReprCharVec),
+}
+
+impl fmt::Debug for Chars {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.clone()).finish()
+    }
+}
+
+impl Iterator for Chars {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            CharsInner::Single(opt_ch) => opt_ch.take(),
+            CharsInner::MultiRev(char_vec_rev) => char_vec_rev.pop(),
+        }
+    }
+}
+
+impl DoubleEndedIterator for Chars {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            CharsInner::Single(opt_ch) => opt_ch.take(),
+            CharsInner::MultiRev(char_vec_rev) => {
+                if char_vec_rev.is_empty() {
+                    None
+                } else {
+                    Some(char_vec_rev.remove(0))
+                }
+            }
+        }
     }
 }
 
