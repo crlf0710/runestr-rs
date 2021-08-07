@@ -5,7 +5,7 @@ use crate::{
     },
     rune_ty::RuneReprCharVec,
 };
-use std::{fmt, marker::PhantomData, ops, rc::Rc};
+use std::{fmt, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
 
 /// A growable rune-based string type.
 #[derive(Clone, Default)]
@@ -106,6 +106,22 @@ impl RuneString {
     /// Append the given `RuneStr` to the end of the `RuneString`.
     pub fn push_rune_str(&mut self, s: &RuneStr) {
         self.1.extend(s.1.iter().copied())
+    }
+}
+
+impl Extend<rune> for RuneString {
+    fn extend<T: IntoIterator<Item = rune>>(&mut self, iter: T) {
+        for rune in iter {
+            self.push(rune);
+        }
+    }
+}
+
+impl FromIterator<rune> for RuneString {
+    fn from_iter<T: IntoIterator<Item = rune>>(iter: T) -> Self {
+        let mut runestr = Self::default();
+        runestr.extend(iter);
+        runestr
     }
 }
 
