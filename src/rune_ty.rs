@@ -5,7 +5,7 @@ use std::{convert::TryFrom, fmt, iter::FromIterator, marker::PhantomData, rc::Rc
 
 /// The `rune` type represents a user-perceived character.
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct rune(u32, PhantomData<Rc<()>>);
 
 pub(crate) type RuneReprCharVec = smallvec::SmallVec<[char; 8]>;
@@ -339,7 +339,8 @@ impl rune {
         unsafe { Some(Self::from_rune_repr_char_vec_lossy(repr)) }
     }
 
-    pub(crate) fn from_inner(v: u32) -> Option<Self> {
+    /// Constructs a `rune` from its internal representation.
+    pub fn from_inner(v: u32) -> Option<Self> {
         if v < MIN_MULTICHAR_RUNE_INTERNAL_VALUE {
             let ch = char::try_from(v).ok()?;
             Self::from_char(ch)
@@ -403,6 +404,27 @@ impl rune {
             RuneInfo::Multi(idx, PhantomData)
         }
     }
+
+    /// Returns the number of bytes this char would need if encoded in `RuneStr`.
+    /// That number of bytes is always between 1 and 6, inclusive.
+    pub fn len_runestr(self) -> usize {
+        crate::fss_utf::len(self.0)
+    }
+
+    /// Encode this rune as RuneStr into the provided byte buffer,
+    /// and then returns the subslice of the buffer that contains the encoded rune.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the buffer is not large enough.
+    /// A buffer of length six is large enough to encode any `rune`.
+    pub fn encode_runestr(self, dst: &mut [u8]) -> &mut crate::RuneStr {
+        let len = match crate::fss_utf::encode_fss_utf(self.0, dst) {
+            Ok(len) => len,
+            _ => panic!("encode_runestr: cannot encode rune, the buffer has {} bytes", dst.len()),
+        };
+        unsafe { crate::rune_str_ty::rune_str_from_rune_bytes_unchecked_mut(&mut dst[..len]) }
+    }
 }
 
 pub(crate) enum RuneInfo {
@@ -454,6 +476,24 @@ impl fmt::Debug for rune {
             }
         }
         write!(f, "')")
+    }
+}
+
+impl PartialEq<rune> for char {
+    fn eq(&self, rhs: &rune) -> bool {
+        match rhs.into_rune_info() {
+            RuneInfo::Single(ch) => *self == ch,
+            RuneInfo::Multi(_, _) => false,
+        }
+    }
+}
+
+impl PartialEq<char> for rune {
+    fn eq(&self, rhs: &char) -> bool {
+        match self.into_rune_info() {
+            RuneInfo::Single(ch) => ch == *rhs,
+            RuneInfo::Multi(_, _) => false,
+        }
     }
 }
 
