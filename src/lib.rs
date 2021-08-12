@@ -85,4 +85,7 @@ pub mod iter {
 pub mod internals {
     pub use crate::tables::grapheme::grapheme_category;
     pub use crate::tables::grapheme::GraphemeCat;
+
+    pub use crate::rune_registry::registry_rune_inner_initial;
+    pub use crate::rune_registry::registry_rune_inner_next;
 }

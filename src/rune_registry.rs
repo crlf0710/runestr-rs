@@ -104,3 +104,21 @@ impl RuneRegistry {
 thread_local! {
     pub(crate) static THREAD_RUNE_REGISTRY: RuneRegistry = RuneRegistry::default();
 }
+
+/// The inner value of the first rune that lives within the registry.
+pub fn registry_rune_inner_initial() -> u32 {
+    crate::rune_ty::MIN_MULTICHAR_RUNE_INTERNAL_VALUE
+}
+
+/// The inner value of the next available rune that will live within the registry.
+pub fn registry_rune_inner_next() -> u32 {
+    let next_idx = THREAD_RUNE_REGISTRY.with(|reg| {
+        u32::try_from(reg.registry_rune_repr_startpos_list.borrow_mut().len())
+            .unwrap()
+            .checked_sub(1)
+            .unwrap()
+    });
+    crate::rune_ty::MIN_MULTICHAR_RUNE_INTERNAL_VALUE
+        .checked_add(next_idx)
+        .unwrap()
+}
