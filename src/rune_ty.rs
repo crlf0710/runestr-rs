@@ -1,7 +1,7 @@
 use crate::rune_registry::{ControlFlow, THREAD_RUNE_REGISTRY};
 use crate::tables::grapheme::GraphemeCat;
 use smallvec::smallvec;
-use std::{convert::TryFrom, fmt, iter::FromIterator, marker::PhantomData, rc::Rc, str};
+use std::{convert::TryFrom, fmt, marker::PhantomData, rc::Rc, str};
 
 /// The `rune` type represents a user-perceived character.
 #[allow(non_camel_case_types)]
@@ -51,30 +51,31 @@ mod grapheme_analysis {
             })
             .count();
         let core_len = len - precore_len - postcore_len;
-        if core_len == 0 {
-            return NormalizeFix::InsertSpaceAsCore(precore_len);
-        }
-        if core_len == 1 {
-            if gcat[precore_len] == GraphemeCat::GC_Control {
-                return NormalizeFix::None;
-            } else if gcat[precore_len] == GraphemeCat::GC_LF {
-                return NormalizeFix::None;
-            } else if gcat[precore_len] == GraphemeCat::GC_CR {
-                return NormalizeFix::InsertLFAfterCRAsCore(precore_len + 1);
-            } else if gcat[precore_len] == GraphemeCat::GC_Regional_Indicator {
-                return NormalizeFix::RepeatRIAsCore(precore_len, precore_len + 1);
+        match core_len {
+            0 => {
+                return NormalizeFix::InsertSpaceAsCore(precore_len);
             }
-        }
-        if core_len == 2 {
-            if gcat[precore_len] == GraphemeCat::GC_CR
-                && gcat[precore_len + 1] == GraphemeCat::GC_LF
-            {
-                return NormalizeFix::None;
-            } else if gcat[precore_len] == GraphemeCat::GC_Regional_Indicator
-                && gcat[precore_len + 1] == GraphemeCat::GC_Regional_Indicator
-            {
-                return NormalizeFix::None;
+            1 => {
+                if gcat[precore_len] == GraphemeCat::GC_Control
+                    || gcat[precore_len] == GraphemeCat::GC_LF
+                {
+                    return NormalizeFix::None;
+                } else if gcat[precore_len] == GraphemeCat::GC_CR {
+                    return NormalizeFix::InsertLFAfterCRAsCore(precore_len + 1);
+                } else if gcat[precore_len] == GraphemeCat::GC_Regional_Indicator {
+                    return NormalizeFix::RepeatRIAsCore(precore_len, precore_len + 1);
+                }
             }
+            2 => {
+                if gcat[precore_len] == GraphemeCat::GC_CR
+                    && gcat[precore_len + 1] == GraphemeCat::GC_LF
+                    || gcat[precore_len] == GraphemeCat::GC_Regional_Indicator
+                        && gcat[precore_len + 1] == GraphemeCat::GC_Regional_Indicator
+                {
+                    return NormalizeFix::None;
+                }
+            }
+            _ => {}
         }
         let core_gcat_slice = &gcat[precore_len..precore_len + core_len];
         if core_gcat_slice.starts_with(&[GraphemeCat::GC_Extended_Pictographic])
@@ -154,7 +155,7 @@ mod grapheme_analysis {
             }
         }
 
-        return NormalizeFix::None;
+        NormalizeFix::None
     }
 
     pub(crate) fn apply_normalize_fix(fix: NormalizeFix, repr: &mut super::RuneReprCharVec) {
@@ -212,13 +213,11 @@ impl rune {
         let grapheme_cat = [grapheme_category(ch).2];
         let fix = normalize_rune(&grapheme_cat);
         if fix.is_none() {
-            unsafe {
-                return Self::from_char_unchecked(ch);
-            }
+            unsafe { Self::from_char_unchecked(ch) }
         } else {
             let mut lossy_chars: RuneReprCharVec = smallvec![ch];
             apply_normalize_fix(fix, &mut lossy_chars);
-            let str = String::from_iter(lossy_chars.into_iter());
+            let str = lossy_chars.into_iter().collect::<String>();
             unsafe { Self::from_multi_char_grapheme_cluster_unchecked(&str) }
         }
     }
@@ -270,7 +269,7 @@ impl rune {
             if let [ch] = repr[..] {
                 unsafe { Some(Self::from_char_unchecked(ch)) }
             } else {
-                let str = String::from_iter(repr.into_iter());
+                let str = repr.into_iter().collect::<String>();
                 unsafe { Some(Self::from_multi_char_grapheme_cluster_unchecked(&str)) }
             }
         } else {
@@ -294,7 +293,7 @@ impl rune {
         if let [ch] = lossy_chars[..] {
             unsafe { Self::from_char_unchecked(ch) }
         } else {
-            let str = String::from_iter(lossy_chars.into_iter());
+            let str = lossy_chars.into_iter().collect::<String>();
             unsafe { Self::from_multi_char_grapheme_cluster_unchecked(&str) }
         }
     }
@@ -421,7 +420,10 @@ impl rune {
     pub fn encode_runestr(self, dst: &mut [u8]) -> &mut crate::RuneStr {
         let len = match crate::fss_utf::encode_fss_utf(self.0, dst) {
             Ok(len) => len,
-            _ => panic!("encode_runestr: cannot encode rune, the buffer has {} bytes", dst.len()),
+            _ => panic!(
+                "encode_runestr: cannot encode rune, the buffer has {} bytes",
+                dst.len()
+            ),
         };
         unsafe { crate::rune_str_ty::rune_str_from_rune_bytes_unchecked_mut(&mut dst[..len]) }
     }

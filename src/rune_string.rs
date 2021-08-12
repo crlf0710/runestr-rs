@@ -48,6 +48,7 @@ impl RuneString {
     ///
     /// You can use `from_str_lossy` instead if you allow the text
     /// be slightly modified to form complete runes.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         use unicode_normalization::UnicodeNormalization;
         use unicode_segmentation::UnicodeSegmentation;
@@ -93,7 +94,7 @@ impl RuneString {
             .extend(std::iter::repeat(0).take(fss_utf::MAX_BYTE_COUNT));
         unsafe {
             self.1.set_len(old_len);
-            let spare_ptr = self.1.as_mut_ptr().offset(old_len as _);
+            let spare_ptr = self.1.as_mut_ptr().add(old_len);
             let used_len = fss_utf::encode_fss_utf(
                 s,
                 std::slice::from_raw_parts_mut(spare_ptr, fss_utf::MAX_BYTE_COUNT),

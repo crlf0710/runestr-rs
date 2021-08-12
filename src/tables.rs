@@ -13,7 +13,7 @@
 #![allow(missing_docs, non_upper_case_globals, non_snake_case)]
 
 /// The version of [Unicode](http://www.unicode.org/)
-/// that this version of unicode-segmentation is based on.
+/// that this version of runestr is based on.
 pub const UNICODE_VERSION: (u64, u64, u64) = (13, 0, 0);
 
 pub mod util {
@@ -33,6 +33,7 @@ pub mod util {
     }
 }
 
+#[allow(clippy::redundant_static_lifetimes)]
 pub mod grapheme {
     use core::result::Result::{Err, Ok};
 

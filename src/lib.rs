@@ -55,11 +55,19 @@ pub use rune_str_ty::RuneStr;
 
 pub use rune_string::RuneString;
 
-/// An slice of `rune`s
+/// An slice of `rune`s.
 pub type RuneSlice = [rune];
 
-/// A `Vec` of `rune`s
+/// A `Vec` of `rune`s.
 pub type RuneVec = Vec<rune>;
+
+pub use rune_str_ty::rune_str_from_rune_bytes as from_rune_bytes;
+
+pub use rune_str_ty::rune_str_from_rune_bytes_mut as from_rune_bytes_mut;
+
+pub use rune_str_ty::rune_str_from_rune_bytes_unchecked as from_rune_bytes_unchecked;
+
+pub use rune_str_ty::rune_str_from_rune_bytes_unchecked_mut as from_rune_bytes_unchecked_mut;
 
 /// `rune` and `RuneStr` related iterators
 pub mod iter {

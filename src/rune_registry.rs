@@ -63,8 +63,8 @@ impl RuneRegistry {
         let startpos_list = self.registry_rune_repr_startpos_list.borrow();
         let mut startpos_list = startpos_list.iter().cloned();
         let mut prev_endpos = startpos_list.next().unwrap();
-        let mut startpos_list = startpos_list.enumerate();
-        while let Some((idx, endpos)) = startpos_list.next() {
+        let startpos_list = startpos_list.enumerate();
+        for (idx, endpos) in startpos_list {
             let idx = u32::try_from(idx).unwrap();
             let rune_repr_range = prev_endpos..endpos;
             if let ControlFlow::Break(v) =

@@ -28,12 +28,54 @@ impl fmt::Debug for RuneStr {
     }
 }
 
+/// Convert a slice of bytes to a string slice without checking that the string contains valid runes.
+///
+/// # Safety
+///
+/// Undefined behavior if the string doesn't contain valid runes.
 pub unsafe fn rune_str_from_rune_bytes_unchecked(bytes: &[u8]) -> &RuneStr {
     unsafe { transmute(bytes) }
 }
 
+/// Convert a slice of bytes to a string slice without checking that the string contains valid runes; mutable version.
+///
+/// # Safety
+///
+/// Undefined behavior if the string doesn't contain valid runes.
 pub unsafe fn rune_str_from_rune_bytes_unchecked_mut(bytes: &mut [u8]) -> &mut RuneStr {
     unsafe { transmute(bytes) }
+}
+
+fn validate_rune_bytes(mut bytes: &[u8]) -> Option<()> {
+    loop {
+        match *bytes {
+            [] => break,
+            [head, ref rest @ ..] => {
+                let cont_len = fss_utf::try_cont_len_from_first_byte(head)?;
+                if rest.len() < cont_len {
+                    return None;
+                }
+                let (cont, rest) = rest.split_at(cont_len);
+                let rune_value = fss_utf::try_decode_fss_utf_value(head, cont)?;
+                bytes = rest;
+                let _ = rune::from_inner(rune_value)?;
+            }
+        }
+    }
+
+    Some(())
+}
+
+/// Convert a slice of bytes to a string slice.
+pub fn rune_str_from_rune_bytes(bytes: &[u8]) -> Option<&RuneStr> {
+    validate_rune_bytes(bytes)?;
+    Some(unsafe { rune_str_from_rune_bytes_unchecked(bytes) })
+}
+
+/// Convert a slice of bytes to a string slice; mutable version.
+pub fn rune_str_from_rune_bytes_mut(bytes: &mut [u8]) -> Option<&mut RuneStr> {
+    validate_rune_bytes(bytes)?;
+    Some(unsafe { rune_str_from_rune_bytes_unchecked_mut(bytes) })
 }
 
 impl RuneStr {
@@ -93,7 +135,7 @@ impl<'str> DoubleEndedIterator for Bytes<'str> {
 impl fmt::Debug for Bytes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Bytes(")?;
-        f.debug_list().entries(self.clone()).finish()?;
+        f.debug_list().entries(*self).finish()?;
         write!(f, ")")?;
         Ok(())
     }
@@ -159,7 +201,7 @@ impl<'str> DoubleEndedIterator for Runes<'str> {
 impl fmt::Debug for Runes<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Runes(")?;
-        f.debug_list().entries(self.clone()).finish()?;
+        f.debug_list().entries(*self).finish()?;
         write!(f, ")")?;
         Ok(())
     }

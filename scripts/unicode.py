@@ -243,7 +243,9 @@ def emit_property_module(f, mod, tbl, emit):
 
 def emit_break_module(f, break_table, break_cats, name):
     Name = name.capitalize()
-    f.write("""pub mod %s {
+    f.write("""
+#[allow(clippy::redundant_static_lifetimes)]
+pub mod %s {
     use core::result::Result::{Ok, Err};
 
     pub use self::%sCat::*;
@@ -300,7 +302,7 @@ if __name__ == "__main__":
         rf.write(preamble)
         rf.write("""
 /// The version of [Unicode](http://www.unicode.org/)
-/// that this version of unicode-segmentation is based on.
+/// that this version of runestr is based on.
 pub const UNICODE_VERSION: (u64, u64, u64) = (%s, %s, %s);
 """ % UNICODE_VERSION)
 
