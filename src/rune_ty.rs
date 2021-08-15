@@ -427,6 +427,17 @@ impl rune {
         };
         unsafe { crate::rune_str_ty::rune_str_from_rune_bytes_unchecked_mut(&mut dst[..len]) }
     }
+
+    /// Convert a slice of bytes to a rune.
+    pub fn from_rune_bytes(bytes: &[u8]) -> Option<Self> {
+        match bytes {
+            [] => None,
+            [h, rest @ ..] => {
+                let v = crate::fss_utf::try_decode_fss_utf_value(*h, rest)?;
+                Self::from_inner(v)
+            }
+        }
+    }
 }
 
 pub(crate) enum RuneInfo {

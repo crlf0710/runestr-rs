@@ -126,6 +126,12 @@ impl FromIterator<rune> for RuneString {
     }
 }
 
+impl<'rhs> ops::AddAssign<&'rhs RuneStr> for RuneString {
+    fn add_assign(&mut self, rhs: &'rhs RuneStr) {
+        self.1.extend_from_slice(&rhs.1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::RuneString;

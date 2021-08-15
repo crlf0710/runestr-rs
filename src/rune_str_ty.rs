@@ -3,7 +3,7 @@ use crate::{
     rune_registry::THREAD_RUNE_REGISTRY,
     rune_ty::{rune, RuneInfo, RuneReprCharVec},
 };
-use std::{fmt, marker::PhantomData, mem::transmute, rc::Rc, str};
+use std::{fmt, marker::PhantomData, mem::transmute, ops::Index, rc::Rc, str};
 
 /// A primitive rune-based string type.
 /// It is usally seen in its borrowed form, `&RuneStr`.
@@ -104,6 +104,36 @@ impl RuneStr {
 #[derive(Clone, Copy)]
 pub struct Bytes<'str> {
     data: &'str [u8],
+}
+
+impl<'str> Bytes<'str> {
+    /// Returns the length that have not been yielded yet, in bytes.
+    pub const fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Returns the rune string slice within a byte range specified by index.
+    /// # Panic
+    /// Panics if the index range is out of bounds or does not fall on rune boundaries.
+    pub fn get_runestr<I>(&self, index: I) -> &'str RuneStr
+    where
+        [u8]: Index<I, Output = [u8]>,
+    {
+        let bytes = self.data.index(index);
+        validate_rune_bytes(bytes).expect("index range doesn't fall on rune boundary");
+        unsafe { rune_str_from_rune_bytes_unchecked(bytes) }
+    }
+}
+
+impl<'str, I> Index<I> for Bytes<'str>
+where
+    [u8]: Index<I>,
+{
+    type Output = <[u8] as Index<I>>::Output;
+
+    fn index(&self, index: I) -> &Self::Output {
+        self.data.index(index)
+    }
 }
 
 impl<'str> Iterator for Bytes<'str> {
