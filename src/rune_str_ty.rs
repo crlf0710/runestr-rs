@@ -256,6 +256,11 @@ impl<'str> Iterator for Chars<'str> {
         if let Some(runes) = &mut self.runes {
             if let Some(r) = runes.next() {
                 match r.into_rune_info() {
+                    RuneInfo::CRLF => {
+                        let chars = &mut self.chars;
+                        chars.extend(['\r', '\n'].iter().copied().rev());
+                        return chars.pop();
+                    }
                     RuneInfo::Single(ch) => {
                         return Some(ch);
                     }
@@ -287,6 +292,11 @@ impl<'str> DoubleEndedIterator for Chars<'str> {
         if let Some(runes) = &mut self.runes {
             if let Some(r) = runes.next_back() {
                 match r.into_rune_info() {
+                    RuneInfo::CRLF => {
+                        let chars_rev = &mut self.chars_rev;
+                        chars_rev.extend(['\r', '\n'].iter().copied());
+                        return chars_rev.pop();
+                    }
                     RuneInfo::Single(ch) => {
                         return Some(ch);
                     }

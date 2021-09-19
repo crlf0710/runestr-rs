@@ -187,6 +187,8 @@ mod grapheme_analysis {
     }
 }
 
+pub(crate) const CRLF_RUNE_INTERNAL_VALUE: u32 = b'\r' as u32;
+
 pub(crate) const MIN_MULTICHAR_RUNE_INTERNAL_VALUE: u32 = char::MAX as u32 + 1;
 pub(crate) const MAX_MULTICHAR_RUNE_INTERNAL_VALUE: u32 = 0x7FFFFFFF;
 
@@ -227,6 +229,9 @@ impl rune {
     }
 
     pub(crate) unsafe fn from_multi_char_grapheme_cluster_unchecked(repr: &str) -> Self {
+        if repr == "\r\n" {
+            return rune(CRLF_RUNE_INTERNAL_VALUE, PhantomData);
+        }
         let repr_bytes = repr.as_bytes();
         let registry_idx = THREAD_RUNE_REGISTRY.with(|registry| {
             let find_result = registry.iterate_existing_rune_reprs(|idx, bytes| {
@@ -340,7 +345,9 @@ impl rune {
 
     /// Constructs a `rune` from its internal representation.
     pub fn from_inner(v: u32) -> Option<Self> {
-        if v < MIN_MULTICHAR_RUNE_INTERNAL_VALUE {
+        if v == CRLF_RUNE_INTERNAL_VALUE {
+            Some(rune(CRLF_RUNE_INTERNAL_VALUE, PhantomData))
+        } else if v < MIN_MULTICHAR_RUNE_INTERNAL_VALUE {
             let ch = char::try_from(v).ok()?;
             Self::from_char(ch)
         } else {
@@ -357,18 +364,19 @@ impl rune {
         self.0
     }
 
-    /// Retrieves the char this rune represents. Returns `None` if it represents
+    /// Retrieves the char this rune corresponds to. Returns `None` if it corresponds to the combination of
     /// multiple chars.
     pub fn into_char(self) -> Option<char> {
         match self.into_rune_info() {
             RuneInfo::Single(ch) => Some(ch),
-            RuneInfo::Multi(..) => None,
+            RuneInfo::CRLF | RuneInfo::Multi(..) => None,
         }
     }
 
-    /// Retrieves an iterator that iterate over all the chars this rune represents.
+    /// Retrieves an iterator that iterate over the list of the chars this rune corresponds to.
     pub fn into_chars(self) -> Chars {
         match self.into_rune_info() {
+            RuneInfo::CRLF => Chars(CharsInner::MultiRev(smallvec!['\r', '\n'])),
             RuneInfo::Single(ch) => Chars(CharsInner::Single(Some(ch))),
             RuneInfo::Multi(idx, _) => {
                 let charvec = THREAD_RUNE_REGISTRY.with(|registry| {
@@ -386,6 +394,7 @@ impl rune {
 
     pub(crate) unsafe fn from_rune_info(ri: RuneInfo) -> Self {
         match ri {
+            RuneInfo::CRLF => rune(CRLF_RUNE_INTERNAL_VALUE, PhantomData),
             RuneInfo::Single(ch) => rune(ch as u32, PhantomData),
             RuneInfo::Multi(idx, _) => rune(
                 idx.checked_add(MIN_MULTICHAR_RUNE_INTERNAL_VALUE).unwrap(),
@@ -395,7 +404,9 @@ impl rune {
     }
 
     pub(crate) fn into_rune_info(self) -> RuneInfo {
-        if self.0 < MIN_MULTICHAR_RUNE_INTERNAL_VALUE {
+        if self.0 == CRLF_RUNE_INTERNAL_VALUE {
+            RuneInfo::CRLF
+        } else if self.0 < MIN_MULTICHAR_RUNE_INTERNAL_VALUE {
             let ch = char::try_from(self.0).expect("Invalid rune internal value");
             RuneInfo::Single(ch)
         } else {
@@ -441,6 +452,7 @@ impl rune {
 }
 
 pub(crate) enum RuneInfo {
+    CRLF,
     Single(char),
     Multi(u32, PhantomData<Rc<()>>),
 }
@@ -448,6 +460,12 @@ pub(crate) enum RuneInfo {
 impl fmt::Display for rune {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self.into_rune_info() {
+            RuneInfo::CRLF => {
+                for ch in ['\r', '\n'] {
+                    write!(f, "{}", ch)?;
+                }
+                Ok(())
+            }
             RuneInfo::Single(ch) => {
                 write!(f, "{}", ch)
             }
@@ -472,6 +490,11 @@ impl fmt::Debug for rune {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "rune('")?;
         match self.into_rune_info() {
+            RuneInfo::CRLF => {
+                for ch in ['\r', '\n'] {
+                    write!(f, "{:?}", ch.escape_debug())?;
+                }
+            }
             RuneInfo::Single(ch) => {
                 write!(f, "{:?}", ch.escape_debug())?;
             }
@@ -496,7 +519,7 @@ impl PartialEq<rune> for char {
     fn eq(&self, rhs: &rune) -> bool {
         match rhs.into_rune_info() {
             RuneInfo::Single(ch) => *self == ch,
-            RuneInfo::Multi(_, _) => false,
+            RuneInfo::CRLF | RuneInfo::Multi(_, _) => false,
         }
     }
 }
@@ -505,7 +528,7 @@ impl PartialEq<char> for rune {
     fn eq(&self, rhs: &char) -> bool {
         match self.into_rune_info() {
             RuneInfo::Single(ch) => ch == *rhs,
-            RuneInfo::Multi(_, _) => false,
+            RuneInfo::CRLF | RuneInfo::Multi(_, _) => false,
         }
     }
 }
@@ -584,5 +607,11 @@ mod tests {
                 .unwrap()
                 .to_string()
         );
+    }
+
+    #[test]
+    fn test_crlf_inner_is_ascii_cr() {
+        assert_eq!(None, rune::from_char('\r'));
+        assert_eq!(b'\r' as u32, rune::from_char_lossy('\r').into_inner());
     }
 }
