@@ -22,7 +22,7 @@ impl fmt::Debug for RuneStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "\"")?;
         for ch in self.chars() {
-            write!(f, "{:?}", ch.escape_debug())?;
+            write!(f, "{}", ch.escape_debug())?;
         }
         write!(f, "\"")
     }

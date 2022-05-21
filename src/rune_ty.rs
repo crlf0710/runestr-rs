@@ -449,6 +449,13 @@ impl rune {
             }
         }
     }
+
+    /// Returns whether this rune is the CRLF (Carriage-return Line-feed) rune.
+    ///
+    /// This corresponds to the only ASCII character rune that corresponds to multiple chars.
+    pub fn is_crlf(self) -> bool {
+        self.0 == CRLF_RUNE_INTERNAL_VALUE
+    }
 }
 
 pub(crate) enum RuneInfo {
@@ -492,11 +499,11 @@ impl fmt::Debug for rune {
         match self.into_rune_info() {
             RuneInfo::CRLF => {
                 for ch in ['\r', '\n'] {
-                    write!(f, "{:?}", ch.escape_debug())?;
+                    write!(f, "{}", ch.escape_debug())?;
                 }
             }
             RuneInfo::Single(ch) => {
-                write!(f, "{:?}", ch.escape_debug())?;
+                write!(f, "{}", ch.escape_debug())?;
             }
             RuneInfo::Multi(idx, _) => {
                 let charvec = THREAD_RUNE_REGISTRY.with(|registry| {
@@ -507,7 +514,7 @@ impl fmt::Debug for rune {
                     })
                 });
                 for ch in charvec.iter() {
-                    write!(f, "{:?}", ch.escape_debug())?;
+                    write!(f, "{}", ch.escape_debug())?;
                 }
             }
         }
@@ -581,7 +588,7 @@ mod tests {
 
     macro_rules! str {
         ($($v:expr),* $(,)?) => {
-            std::array::IntoIter::new([$($v),*]).collect::<String>()
+            [$($v),*].into_iter().collect::<String>()
         };
     }
 
@@ -613,5 +620,15 @@ mod tests {
     fn test_crlf_inner_is_ascii_cr() {
         assert_eq!(None, rune::from_char('\r'));
         assert_eq!(b'\r' as u32, rune::from_char_lossy('\r').into_inner());
+        assert!(rune::from_char_lossy('\r').is_crlf())
+    }
+
+    #[test]
+    fn test_debug_fmt_rune() {
+        assert_eq!(
+            "rune('\\r\\n')",
+            format!("{:?}", rune::from_char_lossy('\r'))
+        );
+        assert_eq!("rune('A')", format!("{:?}", rune::from_char_lossy('A')));
     }
 }
