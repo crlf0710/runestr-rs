@@ -5,7 +5,7 @@ use std::{convert::TryFrom, fmt, marker::PhantomData, rc::Rc, str};
 
 /// The `rune` type represents a user-perceived character.
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct rune(u32, PhantomData<Rc<()>>);
 
 pub(crate) type RuneReprCharVec = smallvec::SmallVec<[char; 8]>;

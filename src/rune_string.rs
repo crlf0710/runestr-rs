@@ -8,7 +8,7 @@ use crate::{
 use std::{fmt, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
 
 /// A growable rune-based string type.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq, Hash)]
 pub struct RuneString(PhantomData<Rc<()>>, Vec<u8>);
 
 impl fmt::Display for RuneString {

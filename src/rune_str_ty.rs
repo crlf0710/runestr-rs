@@ -3,11 +3,32 @@ use crate::{
     rune_registry::THREAD_RUNE_REGISTRY,
     rune_ty::{rune, RuneInfo, RuneReprCharVec},
 };
-use std::{fmt, marker::PhantomData, mem::transmute, ops::Index, rc::Rc, str};
+use std::{fmt, hash, marker::PhantomData, mem, ops::Index, rc::Rc, str};
 
 /// A primitive rune-based string type.
 /// It is usally seen in its borrowed form, `&RuneStr`.
 pub struct RuneStr(PhantomData<Rc<()>>, pub(crate) [u8]);
+
+impl PartialEq for RuneStr {
+    #[inline]
+    fn eq(&self, other: &RuneStr) -> bool {
+        &self.1 == &other.1
+    }
+    #[inline]
+    fn ne(&self, other: &RuneStr) -> bool {
+        !(*self).eq(other)
+    }
+}
+
+impl Eq for RuneStr {}
+
+impl hash::Hash for RuneStr {
+    #[inline]
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        state.write(&self.1);
+        state.write_u8(0xff)
+    }
+}
 
 impl fmt::Display for RuneStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -34,7 +55,7 @@ impl fmt::Debug for RuneStr {
 ///
 /// Undefined behavior if the string doesn't contain valid runes.
 pub unsafe fn rune_str_from_rune_bytes_unchecked(bytes: &[u8]) -> &RuneStr {
-    unsafe { transmute(bytes) }
+    unsafe { mem::transmute(bytes) }
 }
 
 /// Convert a slice of bytes to a string slice without checking that the string contains valid runes; mutable version.
@@ -43,7 +64,7 @@ pub unsafe fn rune_str_from_rune_bytes_unchecked(bytes: &[u8]) -> &RuneStr {
 ///
 /// Undefined behavior if the string doesn't contain valid runes.
 pub unsafe fn rune_str_from_rune_bytes_unchecked_mut(bytes: &mut [u8]) -> &mut RuneStr {
-    unsafe { transmute(bytes) }
+    unsafe { mem::transmute(bytes) }
 }
 
 fn validate_rune_bytes(mut bytes: &[u8]) -> Option<()> {
