@@ -20,6 +20,13 @@ impl PartialEq for RuneStr {
     }
 }
 
+impl PartialEq<str> for RuneStr {
+    #[inline]
+    fn eq(&self, other: &str) -> bool {
+        self.chars().eq(other.chars())
+    }
+}
+
 impl Eq for RuneStr {}
 
 impl hash::Hash for RuneStr {

@@ -5,11 +5,25 @@ use crate::{
     },
     rune_ty::RuneReprCharVec,
 };
-use std::{fmt, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
+use std::{borrow, fmt, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
 
 /// A growable rune-based string type.
 #[derive(Clone, Default, PartialEq, Eq, Hash)]
 pub struct RuneString(PhantomData<Rc<()>>, Vec<u8>);
+
+impl PartialEq<RuneStr> for RuneString {
+    #[inline]
+    fn eq(&self, other: &RuneStr) -> bool {
+        **self == *other
+    }
+}
+
+impl PartialEq<str> for RuneString {
+    #[inline]
+    fn eq(&self, other: &str) -> bool {
+        self.chars().eq(other.chars())
+    }
+}
 
 impl fmt::Display for RuneString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -34,6 +48,21 @@ impl ops::Deref for RuneString {
 impl ops::DerefMut for RuneString {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { rune_str_from_rune_bytes_unchecked_mut(&mut self.1[..]) }
+    }
+}
+
+impl borrow::Borrow<RuneStr> for RuneString {
+    fn borrow(&self) -> &RuneStr {
+        &*self
+    }
+}
+
+impl borrow::ToOwned for RuneStr {
+    type Owned = RuneString;
+
+    #[inline]
+    fn to_owned(&self) -> RuneString {
+        unsafe { RuneString::from_runestr_bytes_unchecked(self.1.to_owned()) }
     }
 }
 
@@ -83,6 +112,11 @@ impl RuneString {
             string.push(rune);
         }
         string
+    }
+
+    /// Converts a vector of bytes to a RuneString without checking that the string contains valid runestr.
+    unsafe fn from_runestr_bytes_unchecked(bytes: Vec<u8>) -> Self {
+        RuneString(PhantomData, bytes)
     }
 
     /// Append the given `rune` to the end of the `RuneString`.
