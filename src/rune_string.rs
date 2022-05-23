@@ -5,11 +5,17 @@ use crate::{
     },
     rune_ty::RuneReprCharVec,
 };
-use std::{borrow, fmt, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
+use std::{borrow, fmt, hash, iter::FromIterator, marker::PhantomData, ops, rc::Rc};
 
 /// A growable rune-based string type.
-#[derive(Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct RuneString(PhantomData<Rc<()>>, Vec<u8>);
+
+impl hash::Hash for RuneString {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        (**self).hash(state);
+    }
+}
 
 impl PartialEq<RuneStr> for RuneString {
     #[inline]
@@ -179,5 +185,25 @@ mod tests {
         let runestr2 = RuneString::from_str_lossy("\r\r\n\n");
         assert_eq!(3, runestr2.runes().count());
         assert_eq!(5, runestr2.chars().count());
+    }
+
+    #[test]
+    fn test_rune_string_hash() {
+        fn calc_hash<T: std::hash::Hash + ?Sized>(v: &T) -> u64 {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::Hasher;
+            let mut hasher = DefaultHasher::new();
+            v.hash(&mut hasher);
+            hasher.finish()
+        }
+
+        let s = RuneString::from_str_lossy("Hello world");
+        let s_hash1 = calc_hash(&s);
+        let s_hash2 = calc_hash(&s);
+        let s_hash3 = calc_hash(&*s);
+        let s_hash4 = calc_hash(&*s);
+        assert_eq!(s_hash1, s_hash2);
+        assert_eq!(s_hash1, s_hash3);
+        assert_eq!(s_hash1, s_hash4);
     }
 }
